@@ -19,8 +19,8 @@
 
   <main id="video-feed">
     <div class="empty-state">
-      <h2>Welcome to Bogus! 📼</h2>
-      <p>A brainrot-free feed for Boomers, Gen X, and Millennials.</p>
+      <h2>Welcome to Bogus 📼</h2>
+      <p>Short-form video for 1946–1996.</p>
     </div>
   </main>
 
@@ -30,12 +30,17 @@
     <div class="modal-card">
       <span class="close-btn" onclick="toggleModal('auth-modal', false)">&times;</span>
       <h2>Enter Bogus</h2>
-      <p class="subtitle">Strictly 1946 – 1996. Born later? Access denied.</p>
+      <p class="subtitle">Strictly 1946 – 1996.</p>
 
       <input type="text" id="reg-username" placeholder="Username" />
       <input type="email" id="auth-email" placeholder="Email" />
       <input type="password" id="auth-password" placeholder="Password" />
       <input type="number" id="reg-year" placeholder="Birth Year (e.g. 1985)" min="1946" max="1996" />
+
+      <div id="trivia-box">
+        <label id="trivia-question"></label>
+        <input type="text" id="trivia-answer" placeholder="Your answer" />
+      </div>
 
       <div class="modal-buttons">
         <button onclick="handleRegister()">Join Bogus</button>
@@ -49,7 +54,7 @@
       <span class="close-btn" onclick="toggleModal('upload-modal', false)">&times;</span>
       <h2>Upload Video</h2>
       <input type="file" id="video-file" accept="video/*" />
-      <input type="text" id="video-caption" placeholder="Caption (keep it classic)" />
+      <input type="text" id="video-caption" placeholder="Caption" />
       <button id="upload-submit-btn" onclick="handleUpload()">Post to Feed</button>
     </div>
   </div>
@@ -57,26 +62,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
