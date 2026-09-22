@@ -132,6 +132,18 @@ video {
   margin-bottom: 6px;
 }
 
+#trivia-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#trivia-question {
+  font-size: 0.82rem;
+  color: #66fcf1;
+  line-height: 1.2;
+}
+
 input {
   padding: 10px;
   border-radius: 6px;
