@@ -11,7 +11,8 @@
 <body>
   <header class="top-nav">
     <h1>BOGUS 📼</h1>
-    <div id="auth-controls">
+    <div id="nav-actions">
+      <button id="open-dm-btn" style="display:none;" onclick="openInbox()">💬 Messages</button>
       <button id="open-auth-btn" onclick="toggleModal('auth-modal', true)">Sign In / Register</button>
       <button id="signout-btn" style="display:none;" onclick="handleSignOut()">Sign Out</button>
     </div>
@@ -26,6 +27,7 @@
 
   <button id="upload-fab" onclick="toggleModal('upload-modal', true)">➕ Post Clip</button>
 
+  <!-- Auth Modal -->
   <div id="auth-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <span class="close-btn" onclick="toggleModal('auth-modal', false)">&times;</span>
@@ -49,6 +51,7 @@
     </div>
   </div>
 
+  <!-- Upload Modal -->
   <div id="upload-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <span class="close-btn" onclick="toggleModal('upload-modal', false)">&times;</span>
@@ -56,6 +59,32 @@
       <input type="file" id="video-file" accept="video/*" />
       <input type="text" id="video-caption" placeholder="Caption" />
       <button id="upload-submit-btn" onclick="handleUpload()">Post to Feed</button>
+    </div>
+  </div>
+
+  <!-- Messenger Modal -->
+  <div id="dm-modal" class="modal-overlay hidden">
+    <div class="modal-card dm-card">
+      <div class="dm-header">
+        <span id="dm-chat-title">Direct Messages</span>
+        <span class="close-btn" onclick="toggleModal('dm-modal', false)">&times;</span>
+      </div>
+
+      <!-- User List View -->
+      <div id="dm-user-list-view">
+        <div class="dm-list-title">Start a Chat</div>
+        <div id="dm-users-container"></div>
+      </div>
+
+      <!-- Active Thread View -->
+      <div id="dm-thread-view" class="hidden">
+        <button class="dm-back-btn" onclick="showUserList()">← Back to users</button>
+        <div id="chat-messages-container"></div>
+        <form class="dm-input-row" onsubmit="handleSendMessage(event)">
+          <input type="text" id="dm-message-input" placeholder="Type a message..." autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </div>
     </div>
   </div>
 
