@@ -2,7 +2,7 @@ name: Build Android App
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Set up Java JDK
         uses: actions/setup-java@v4
@@ -24,24 +24,35 @@ jobs:
           distribution: 'zulu'
           java-version: 17
 
-      - name: Install Capacitor & Platforms
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup & Build Capacitor Android
         run: |
-          npm init -y
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init Bogus com.bogus.app --web-dir .
-          npx cap add android
+          
+          # Initialize only if config doesn't exist
+          if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
+            npx cap init Bogus com.bogus.app --web-dir .
+          fi
+
+          # Add android platform if folder isn't there, otherwise sync
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
           npx cap sync
 
       - name: Build Debug APK
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug
-
-      - name: Build Release App Bundle (for Google Play)
-        run: |
-          cd android
-          ./gradlew bundleRelease || true
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
