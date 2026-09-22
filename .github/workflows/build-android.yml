@@ -24,20 +24,30 @@ jobs:
           distribution: 'zulu'
           java-version: 21
 
-      - name: Setup & Build Capacitor Android
+      - name: Prepare Web Assets & Capacitor Config
         run: |
+          # 1. Create a clean web distribution folder
+          mkdir -p dist
+          cp index.html style.css app.js dist/
+
+          # 2. Ensure package.json exists and install dependencies
           if [ ! -f package.json ]; then
             npm init -y
           fi
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          
-          if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
-            npx cap init Bogus com.bogus.app --web-dir .
-          fi
 
-          if [ ! -d android ]; then
-            npx cap add android
-          fi
+          # 3. Create capacitor config pointing to dist
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.bogus.app",
+            "appName": "Bogus",
+            "webDir": "dist"
+          }
+          EOF
+
+          # 4. Clean add and sync android
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
       - name: Build Debug APK
