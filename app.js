@@ -7,6 +7,12 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const CLOUDINARY_CLOUD_NAME = "mjavcozx";
 const CLOUDINARY_PRESET = "bogus_uploads";
 
+// Active Chat State
+let currentUser = null;
+let activeRecipientId = null;
+let activeRecipientUsername = '';
+let realtimeChannel = null;
+
 // Verification Questions
 const RETRO_QUESTIONS = [
   {
@@ -55,7 +61,7 @@ function toggleModal(id, show) {
   }
 }
 
-// 1. Sign Up, Age Gatekeeper & Trivia Verification
+// 1. Sign Up & Age Verification
 async function handleRegister() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
@@ -64,22 +70,20 @@ async function handleRegister() {
   const userAnswer = document.getElementById('trivia-answer').value.trim().toLowerCase();
 
   if (!email || !password || !username || !year || !userAnswer) {
-    alert("Please fill out all fields, including the verification question!");
+    alert("Please fill out all fields!");
     return;
   }
 
-  // Birth Year Check (1946 - 1996)
   if (year < 1946 || year > 1996) {
     alert("Birth year must be between 1946 and 1996.");
     return;
   }
 
-  // Verification Check
   const validAnswers = RETRO_QUESTIONS[activeQuestionIndex].answers;
   const passedTrivia = validAnswers.some(ans => userAnswer.includes(ans));
 
   if (!passedTrivia) {
-    alert("Incorrect answer for verification question. Try again.");
+    alert("Incorrect verification answer. Try again.");
     setRandomTrivia();
     document.getElementById('trivia-answer').value = '';
     return;
@@ -118,6 +122,7 @@ async function handleSignIn() {
 // 3. Sign Out
 async function handleSignOut() {
   await client.auth.signOut();
+  if (realtimeChannel) client.removeChannel(realtimeChannel);
   checkUser();
 }
 
@@ -126,21 +131,26 @@ async function checkUser() {
   const { data: { session } } = await client.auth.getSession();
   const openBtn = document.getElementById('open-auth-btn');
   const outBtn = document.getElementById('signout-btn');
+  const dmBtn = document.getElementById('open-dm-btn');
 
   if (session) {
+    currentUser = session.user;
     openBtn.style.display = 'none';
     outBtn.style.display = 'block';
+    dmBtn.style.display = 'block';
+    setupRealtimeSubscription();
   } else {
+    currentUser = null;
     openBtn.style.display = 'block';
     outBtn.style.display = 'none';
+    dmBtn.style.display = 'none';
   }
   loadVideos();
 }
 
 // 5. Video Upload via Cloudinary
 async function handleUpload() {
-  const { data: { session } } = await client.auth.getSession();
-  if (!session) {
+  if (!currentUser) {
     alert("You must sign in to post a video!");
     toggleModal('upload-modal', false);
     toggleModal('auth-modal', true);
@@ -152,10 +162,7 @@ async function handleUpload() {
   const file = fileInput.files[0];
 
   if (!file) return alert("Select a video file first!");
-
-  if (file.size > 100 * 1024 * 1024) {
-    return alert("File too big! Please keep videos under 100MB.");
-  }
+  if (file.size > 100 * 1024 * 1024) return alert("Keep videos under 100MB.");
 
   const btn = document.getElementById('upload-submit-btn');
   btn.innerText = "Uploading to Cloud...";
@@ -174,11 +181,9 @@ async function handleUpload() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || "Upload failed");
 
-    const publicVideoUrl = data.secure_url;
-
     const { error: dbError } = await client.from('videos').insert({
-      user_id: session.user.id,
-      video_url: publicVideoUrl,
+      user_id: currentUser.id,
+      video_url: data.secure_url,
       caption: caption
     });
 
@@ -196,7 +201,7 @@ async function handleUpload() {
   }
 }
 
-// 6. Fetch & Render Feed
+// 6. Feed Loader
 async function loadVideos() {
   const feed = document.getElementById('video-feed');
 
@@ -211,16 +216,147 @@ async function loadVideos() {
   videos.forEach(v => {
     const card = document.createElement('div');
     card.className = 'video-card';
+    const authorName = v.profiles?.username || 'user';
+    const dmButtonHtml = currentUser && currentUser.id !== v.user_id 
+      ? `<button class="message-user-btn" onclick="openChatWith('${v.user_id}', '${authorName}')">💬 Message @${authorName}</button>` 
+      : '';
+
     card.innerHTML = `
       <video src="${v.video_url}" loop playsinline controls></video>
       <div class="overlay-info">
-        <h3>@${v.profiles?.username || 'user'}</h3>
+        <h3>@${authorName}</h3>
         <p>${v.caption || ''}</p>
+        ${dmButtonHtml}
       </div>
     `;
     feed.appendChild(card);
   });
 }
 
-// Initial session check
+// 7. Messenger & Realtime Chat Logic
+function openInbox() {
+  if (!currentUser) {
+    toggleModal('auth-modal', true);
+    return;
+  }
+  showUserList();
+  loadAllUsers();
+  toggleModal('dm-modal', true);
+}
+
+function showUserList() {
+  activeRecipientId = null;
+  document.getElementById('dm-user-list-view').classList.remove('hidden');
+  document.getElementById('dm-thread-view').classList.add('hidden');
+  document.getElementById('dm-chat-title').innerText = "Direct Messages";
+}
+
+async function loadAllUsers() {
+  const container = document.getElementById('dm-users-container');
+  container.innerHTML = '<div style="color:#c5c6c7; font-size:0.85rem;">Finding members...</div>';
+
+  const { data: profiles, error } = await client
+    .from('profiles')
+    .select('id, username')
+    .neq('id', currentUser.id);
+
+  if (error || !profiles || profiles.length === 0) {
+    container.innerHTML = '<div style="color:#c5c6c7; font-size:0.85rem;">No other users found yet.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  profiles.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'dm-user-row';
+    row.innerHTML = `<span>@${p.username}</span><button class="message-user-btn">Chat</button>`;
+    row.onclick = () => openChatWith(p.id, p.username);
+    container.appendChild(row);
+  });
+}
+
+async function openChatWith(recipientId, recipientUsername) {
+  if (!currentUser) {
+    toggleModal('auth-modal', true);
+    return;
+  }
+
+  activeRecipientId = recipientId;
+  activeRecipientUsername = recipientUsername;
+
+  document.getElementById('dm-user-list-view').classList.add('hidden');
+  document.getElementById('dm-thread-view').classList.remove('hidden');
+  document.getElementById('dm-chat-title').innerText = `@${recipientUsername}`;
+
+  toggleModal('dm-modal', true);
+  loadMessagesForActiveThread();
+}
+
+async function loadMessagesForActiveThread() {
+  const container = document.getElementById('chat-messages-container');
+  container.innerHTML = '';
+
+  const { data: messages, error } = await client
+    .from('messages')
+    .select('*')
+    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeRecipientId}),and(sender_id.eq.${activeRecipientId},receiver_id.eq.${currentUser.id})`)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  messages.forEach(msg => appendMessageBubble(msg));
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendMessageBubble(msg) {
+  const container = document.getElementById('chat-messages-container');
+  const bubble = document.createElement('div');
+  const isMine = msg.sender_id === currentUser.id;
+  bubble.className = `chat-bubble ${isMine ? 'sent' : 'received'}`;
+  bubble.innerText = msg.content;
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function handleSendMessage(event) {
+  event.preventDefault();
+  const input = document.getElementById('dm-message-input');
+  const text = input.value.trim();
+
+  if (!text || !activeRecipientId || !currentUser) return;
+
+  input.value = '';
+
+  const { error } = await client.from('messages').insert({
+    sender_id: currentUser.id,
+    receiver_id: activeRecipientId,
+    content: text
+  });
+
+  if (error) alert("Failed to send message: " + error.message);
+}
+
+// 8. Listen for Incoming Live Messages via Supabase Realtime
+function setupRealtimeSubscription() {
+  if (realtimeChannel) client.removeChannel(realtimeChannel);
+
+  realtimeChannel = client
+    .channel('public:messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      const newMsg = payload.new;
+      if (
+        activeRecipientId && 
+        ((newMsg.sender_id === activeRecipientId && newMsg.receiver_id === currentUser.id) ||
+         (newMsg.sender_id === currentUser.id && newMsg.receiver_id === activeRecipientId))
+      ) {
+        appendMessageBubble(newMsg);
+      }
+    })
+    .subscribe();
+}
+
+// Boot check
 checkUser();
