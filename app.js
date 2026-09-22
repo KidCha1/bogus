@@ -7,13 +7,14 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const CLOUDINARY_CLOUD_NAME = "mjavcozx";
 const CLOUDINARY_PRESET = "bogus_uploads";
 
-// Active Chat State
+// State
 let currentUser = null;
 let activeRecipientId = null;
 let activeRecipientUsername = '';
 let realtimeChannel = null;
+let pendingReportTarget = null; // { videoId, reportedUserId }
 
-// Verification Questions
+// Retro Verification Bank
 const RETRO_QUESTIONS = [
   {
     q: "Verification: What did you do to a Nintendo cartridge when it wouldn't work?",
@@ -61,7 +62,7 @@ function toggleModal(id, show) {
   }
 }
 
-// 1. Sign Up & Age Verification
+// 1. Auth & Age Gate (1946–1996)
 async function handleRegister() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
@@ -106,7 +107,6 @@ async function handleRegister() {
   }
 }
 
-// 2. Sign In
 async function handleSignIn() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
@@ -119,14 +119,12 @@ async function handleSignIn() {
   }
 }
 
-// 3. Sign Out
 async function handleSignOut() {
   await client.auth.signOut();
   if (realtimeChannel) client.removeChannel(realtimeChannel);
   checkUser();
 }
 
-// 4. Session State Check
 async function checkUser() {
   const { data: { session } } = await client.auth.getSession();
   const openBtn = document.getElementById('open-auth-btn');
@@ -148,7 +146,7 @@ async function checkUser() {
   loadVideos();
 }
 
-// 5. Video Upload via Cloudinary
+// 2. Cloudinary Upload (100MB limit)
 async function handleUpload() {
   if (!currentUser) {
     alert("You must sign in to post a video!");
@@ -201,7 +199,7 @@ async function handleUpload() {
   }
 }
 
-// 6. Feed Loader
+// 3. Feed Loader with DM and Report Buttons
 async function loadVideos() {
   const feed = document.getElementById('video-feed');
 
@@ -217,8 +215,9 @@ async function loadVideos() {
     const card = document.createElement('div');
     card.className = 'video-card';
     const authorName = v.profiles?.username || 'user';
-    const dmButtonHtml = currentUser && currentUser.id !== v.user_id 
-      ? `<button class="message-user-btn" onclick="openChatWith('${v.user_id}', '${authorName}')">💬 Message @${authorName}</button>` 
+
+    const dmButtonHtml = (currentUser && currentUser.id !== v.user_id)
+      ? `<button class="action-btn" onclick="openChatWith('${v.user_id}', '${authorName}')">💬 Message</button>`
       : '';
 
     card.innerHTML = `
@@ -226,14 +225,55 @@ async function loadVideos() {
       <div class="overlay-info">
         <h3>@${authorName}</h3>
         <p>${v.caption || ''}</p>
-        ${dmButtonHtml}
+        <div class="card-action-bar">
+          ${dmButtonHtml}
+          <button class="action-btn report-btn" onclick="openReportModal('${v.id}', '${v.user_id}')">🚩 Report</button>
+        </div>
       </div>
     `;
     feed.appendChild(card);
   });
 }
 
-// 7. Messenger & Realtime Chat Logic
+// 4. Report System
+function openReportModal(videoId, reportedUserId) {
+  if (!currentUser) {
+    alert("Please sign in to report content.");
+    toggleModal('auth-modal', true);
+    return;
+  }
+  pendingReportTarget = { videoId, reportedUserId };
+  toggleModal('report-modal', true);
+}
+
+async function submitReport() {
+  if (!pendingReportTarget || !currentUser) return;
+
+  const reason = document.getElementById('report-reason').value;
+  const btn = document.getElementById('report-submit-btn');
+
+  btn.innerText = "Submitting...";
+  btn.disabled = true;
+
+  const { error } = await client.from('reports').insert({
+    reporter_id: currentUser.id,
+    reported_user_id: pendingReportTarget.reportedUserId || null,
+    video_id: pendingReportTarget.videoId || null,
+    reason: reason
+  });
+
+  btn.innerText = "Submit Report";
+  btn.disabled = false;
+  toggleModal('report-modal', false);
+
+  if (error) {
+    alert("Failed to submit report: " + error.message);
+  } else {
+    alert("Report logged. Thank you.");
+  }
+}
+
+// 5. Direct Messaging System
 function openInbox() {
   if (!currentUser) {
     toggleModal('auth-modal', true);
@@ -269,7 +309,7 @@ async function loadAllUsers() {
   profiles.forEach(p => {
     const row = document.createElement('div');
     row.className = 'dm-user-row';
-    row.innerHTML = `<span>@${p.username}</span><button class="message-user-btn">Chat</button>`;
+    row.innerHTML = `<span>@${p.username}</span><button class="action-btn">💬 Chat</button>`;
     row.onclick = () => openChatWith(p.id, p.username);
     container.appendChild(row);
   });
@@ -327,7 +367,6 @@ async function handleSendMessage(event) {
   const text = input.value.trim();
 
   if (!text || !activeRecipientId || !currentUser) return;
-
   input.value = '';
 
   const { error } = await client.from('messages').insert({
@@ -336,10 +375,10 @@ async function handleSendMessage(event) {
     content: text
   });
 
-  if (error) alert("Failed to send message: " + error.message);
+  if (error) alert("Failed to send: " + error.message);
 }
 
-// 8. Listen for Incoming Live Messages via Supabase Realtime
+// 6. Supabase Realtime Listener
 function setupRealtimeSubscription() {
   if (realtimeChannel) client.removeChannel(realtimeChannel);
 
@@ -348,7 +387,7 @@ function setupRealtimeSubscription() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
       const newMsg = payload.new;
       if (
-        activeRecipientId && 
+        activeRecipientId &&
         ((newMsg.sender_id === activeRecipientId && newMsg.receiver_id === currentUser.id) ||
          (newMsg.sender_id === currentUser.id && newMsg.receiver_id === activeRecipientId))
       ) {
