@@ -74,7 +74,7 @@ video {
   position: absolute;
   bottom: 80px;
   left: 20px;
-  max-width: 70%;
+  max-width: 75%;
   z-index: 10;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
 }
@@ -84,15 +84,28 @@ video {
   margin-bottom: 4px;
 }
 
-.message-user-btn {
-  background: transparent;
+.card-action-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.action-btn {
+  background: rgba(11, 12, 16, 0.7);
   color: #66fcf1;
   border: 1px solid #45a29e;
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  border-radius: 12px;
-  margin-top: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 14px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-btn.report-btn {
+  border-color: #ff4757;
+  color: #ff4757;
 }
 
 #upload-fab {
@@ -162,7 +175,7 @@ video {
   line-height: 1.2;
 }
 
-input {
+input, select {
   padding: 10px;
   border-radius: 6px;
   border: 1px solid #45a29e;
@@ -202,7 +215,7 @@ button.secondary {
   padding: 20px;
 }
 
-/* Messenger Interface */
+/* Messenger Window */
 .dm-card {
   max-width: 440px;
   height: 520px;
@@ -243,7 +256,6 @@ button.secondary {
   background: #0b0c10;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
 .dm-user-row:hover {
