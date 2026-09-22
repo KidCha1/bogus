@@ -1,28 +1,87 @@
+// Supabase Configuration
 const SUPABASE_URL = "https://ibygzwcxmtthxwgaxsib.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_heeXi4X2kSJdzk2yERH5Fw_c05PnLfS";
-
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Cloudinary Configuration
+const CLOUDINARY_CLOUD_NAME = "mjavcozx";
+const CLOUDINARY_PRESET = "bogus_uploads";
+
+// Verification Questions
+const RETRO_QUESTIONS = [
+  {
+    q: "Verification: What did you do to a Nintendo cartridge when it wouldn't work?",
+    answers: ["blow", "blew", "blow on it", "blow in it", "blow into it"]
+  },
+  {
+    q: "Verification: Finish the phrase: 'Talk to the _____'",
+    answers: ["hand", "the hand"]
+  },
+  {
+    q: "Verification: What writing tool did you use to manually rewind a cassette tape?",
+    answers: ["pencil", "pen", "a pencil", "a pen", "bic pen"]
+  },
+  {
+    q: "Verification: Complete the phrase: 'Be kind, please ______'",
+    answers: ["rewind"]
+  },
+  {
+    q: "Verification: What did AOL announce out loud when an email arrived?",
+    answers: ["you've got mail", "you got mail", "youve got mail"]
+  }
+];
+
+let activeQuestionIndex = 0;
+
+function setRandomTrivia() {
+  activeQuestionIndex = Math.floor(Math.random() * RETRO_QUESTIONS.length);
+  const qLabel = document.getElementById('trivia-question');
+  if (qLabel) {
+    qLabel.innerText = RETRO_QUESTIONS[activeQuestionIndex].q;
+  }
+}
 
 function toggleModal(id, show) {
   const modal = document.getElementById(id);
-  if (show) modal.classList.remove('hidden');
-  else modal.classList.add('hidden');
+  if (show) {
+    modal.classList.remove('hidden');
+    if (id === 'auth-modal') {
+      setRandomTrivia();
+      const ansInput = document.getElementById('trivia-answer');
+      if (ansInput) ansInput.value = '';
+    }
+  } else {
+    modal.classList.add('hidden');
+  }
 }
 
-// 1. Sign Up & Age Gatekeeper (Strictly 1946 - 1996)
+// 1. Sign Up, Age Gatekeeper & Trivia Verification
 async function handleRegister() {
-  const email = document.getElementById('auth-email').value;
+  const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
-  const username = document.getElementById('reg-username').value;
+  const username = document.getElementById('reg-username').value.trim();
   const year = parseInt(document.getElementById('reg-year').value, 10);
+  const userAnswer = document.getElementById('trivia-answer').value.trim().toLowerCase();
 
-  if (!email || !password || !username || !year) {
-    alert("Please fill out all fields!");
+  if (!email || !password || !username || !year || !userAnswer) {
+    alert("Please fill out all fields, including the verification question!");
     return;
   }
 
+  // Birth Year Check (1946 - 1996)
   if (year < 1946 || year > 1996) {
-    alert("ACCESS DENIED: Bogus is strictly for Boomers, Gen X, and Millennials (1946–1996). Go play on TikTok!");
+    alert("Birth year must be between 1946 and 1996.");
+    return;
+  }
+
+  // Verification Check
+  const validAnswers = RETRO_QUESTIONS[activeQuestionIndex].answers;
+  const passedTrivia = validAnswers.some(ans => userAnswer.includes(ans));
+
+  if (!passedTrivia) {
+    alert("Incorrect answer for verification question. Try again.");
+    setRandomTrivia();
+    document.getElementById('trivia-answer').value = '';
     return;
   }
 
@@ -37,7 +96,7 @@ async function handleRegister() {
 
   if (pError) alert(pError.message);
   else {
-    alert("Welcome to Bogus! You passed the gatekeeper.");
+    alert("Welcome to Bogus!");
     toggleModal('auth-modal', false);
     checkUser();
   }
@@ -45,7 +104,7 @@ async function handleRegister() {
 
 // 2. Sign In
 async function handleSignIn() {
-  const email = document.getElementById('auth-email').value;
+  const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
 
   const { error } = await client.auth.signInWithPassword({ email, password });
@@ -78,7 +137,7 @@ async function checkUser() {
   loadVideos();
 }
 
-// 5. Video Upload to bogus-clips1
+// 5. Video Upload via Cloudinary
 async function handleUpload() {
   const { data: { session } } = await client.auth.getSession();
   if (!session) {
@@ -94,39 +153,50 @@ async function handleUpload() {
 
   if (!file) return alert("Select a video file first!");
 
-  const btn = document.getElementById('upload-submit-btn');
-  btn.innerText = "Uploading...";
-  btn.disabled = true;
-
-  const fileName = `${session.user.id}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await client.storage
-    .from('bogus-clips1')
-    .upload(fileName, file);
-
-  if (uploadError) {
-    alert("Upload failed: " + uploadError.message);
-    btn.innerText = "Post to Feed";
-    btn.disabled = false;
-    return;
+  if (file.size > 100 * 1024 * 1024) {
+    return alert("File too big! Please keep videos under 100MB.");
   }
 
-  const { data: { publicUrl } } = client.storage
-    .from('bogus-clips1')
-    .getPublicUrl(fileName);
+  const btn = document.getElementById('upload-submit-btn');
+  btn.innerText = "Uploading to Cloud...";
+  btn.disabled = true;
 
-  await client.from('videos').insert({
-    user_id: session.user.id,
-    video_url: publicUrl,
-    caption: caption
-  });
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_PRESET);
 
-  btn.innerText = "Post to Feed";
-  btn.disabled = false;
-  toggleModal('upload-modal', false);
-  loadVideos();
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || "Upload failed");
+
+    const publicVideoUrl = data.secure_url;
+
+    const { error: dbError } = await client.from('videos').insert({
+      user_id: session.user.id,
+      video_url: publicVideoUrl,
+      caption: caption
+    });
+
+    if (dbError) throw dbError;
+
+    btn.innerText = "Post to Feed";
+    btn.disabled = false;
+    toggleModal('upload-modal', false);
+    loadVideos();
+
+  } catch (err) {
+    alert("Upload error: " + err.message);
+    btn.innerText = "Post to Feed";
+    btn.disabled = false;
+  }
 }
 
-// 6. Fetch & Render Vertical Snap Feed
+// 6. Fetch & Render Feed
 async function loadVideos() {
   const feed = document.getElementById('video-feed');
 
@@ -144,7 +214,7 @@ async function loadVideos() {
     card.innerHTML = `
       <video src="${v.video_url}" loop playsinline controls></video>
       <div class="overlay-info">
-        <h3>@${v.profiles?.username || 'vintage_user'}</h3>
+        <h3>@${v.profiles?.username || 'user'}</h3>
         <p>${v.caption || ''}</p>
       </div>
     `;
@@ -152,4 +222,5 @@ async function loadVideos() {
   });
 }
 
+// Initial session check
 checkUser();
