@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bogus</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="top-nav">
+    <h1>BOGUS 📼</h1>
+    <div id="auth-controls">
+      <button id="open-auth-btn" onclick="toggleModal('auth-modal', true)">Sign In / Register</button>
+      <button id="signout-btn" style="display:none;" onclick="handleSignOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <main id="video-feed">
+    <div class="empty-state">
+      <h2>Welcome to Bogus! 📼</h2>
+      <p>A brainrot-free feed for Boomers, Gen X, and Millennials.</p>
+    </div>
+  </main>
+
+  <button id="upload-fab" onclick="toggleModal('upload-modal', true)">➕ Post Clip</button>
+
+  <div id="auth-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-btn" onclick="toggleModal('auth-modal', false)">&times;</span>
+      <h2>Enter Bogus</h2>
+      <p class="subtitle">Strictly 1946 – 1996. Born later? Access denied.</p>
+
+      <input type="text" id="reg-username" placeholder="Username" />
+      <input type="email" id="auth-email" placeholder="Email" />
+      <input type="password" id="auth-password" placeholder="Password" />
+      <input type="number" id="reg-year" placeholder="Birth Year (e.g. 1985)" min="1946" max="1996" />
+
+      <div class="modal-buttons">
+        <button onclick="handleRegister()">Join Bogus</button>
+        <button class="secondary" onclick="handleSignIn()">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-btn" onclick="toggleModal('upload-modal', false)">&times;</span>
+      <h2>Upload Video</h2>
+      <input type="file" id="video-file" accept="video/*" />
+      <input type="text" id="video-caption" placeholder="Caption (keep it classic)" />
+      <button id="upload-submit-btn" onclick="handleUpload()">Post to Feed</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
