@@ -62,6 +62,25 @@
     </div>
   </div>
 
+  <!-- Report Modal -->
+  <div id="report-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-btn" onclick="toggleModal('report-modal', false)">&times;</span>
+      <h2>Report Content</h2>
+      <p class="subtitle">Flag inappropriate material or policy violations.</p>
+
+      <select id="report-reason">
+        <option value="suspected_born_after_1996">Suspected born after 1996</option>
+        <option value="spam">Spam / Scam</option>
+        <option value="illegal">Illegal or Dangerous Content</option>
+        <option value="harassment">Harassment / Bullying</option>
+        <option value="other">Other Violation</option>
+      </select>
+
+      <button id="report-submit-btn" onclick="submitReport()">Submit Report</button>
+    </div>
+  </div>
+
   <!-- Messenger Modal -->
   <div id="dm-modal" class="modal-overlay hidden">
     <div class="modal-card dm-card">
@@ -70,13 +89,13 @@
         <span class="close-btn" onclick="toggleModal('dm-modal', false)">&times;</span>
       </div>
 
-      <!-- User List View -->
+      <!-- User Directory -->
       <div id="dm-user-list-view">
         <div class="dm-list-title">Start a Chat</div>
         <div id="dm-users-container"></div>
       </div>
 
-      <!-- Active Thread View -->
+      <!-- Active Thread -->
       <div id="dm-thread-view" class="hidden">
         <button class="dm-back-btn" onclick="showUserList()">← Back to users</button>
         <div id="chat-messages-container"></div>
