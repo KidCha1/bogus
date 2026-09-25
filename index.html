@@ -2,106 +2,151 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <title>Bogus</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📼</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
-  <header class="top-nav">
-    <h1>BOGUS 📼</h1>
-    <div id="nav-actions">
-      <button id="open-dm-btn" style="display:none;" onclick="openInbox()">💬 Messages</button>
-      <button id="open-auth-btn" onclick="toggleModal('auth-modal', true)">Sign In / Register</button>
-      <button id="signout-btn" style="display:none;" onclick="handleSignOut()">Sign Out</button>
+<body class="crt-glow">
+  <!-- VCR Top Header Deck -->
+  <header class="vcr-deck">
+    <div class="deck-brand">
+      <span class="vcr-logo">BOGUS 📼</span>
+    </div>
+
+    <!-- Fluorescent Green Digital Display -->
+    <div class="vcr-display">
+      <span class="display-mode">SP</span>
+      <span class="display-ch">CH 03</span>
+      <span class="display-clock" id="vcr-clock">12:00 AM</span>
+    </div>
+
+    <div class="deck-actions">
+      <button id="open-dm-btn" class="vcr-btn" style="display:none;" onclick="openInbox()">📟 PAGER</button>
+      <button id="open-auth-btn" class="vcr-btn" onclick="toggleModal('auth-modal', true)">🔑 LOGIN</button>
+      <button id="signout-btn" class="vcr-btn danger" style="display:none;" onclick="handleSignOut()">⏏ EJECT</button>
     </div>
   </header>
 
-  <main id="video-feed">
-    <div class="empty-state">
-      <h2>Welcome to Bogus 📼</h2>
-      <p>Short-form video for 1946–1996.</p>
-    </div>
-  </main>
+  <!-- CRT Monitor Video Frame -->
+  <div class="crt-screen-container">
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
 
-  <button id="upload-fab" onclick="toggleModal('upload-modal', true)">➕ Post Clip</button>
+    <main id="video-feed">
+      <div class="empty-state">
+        <h2>[ NO CASSETTE INSERTED ]</h2>
+        <p>TAP '● REC CLIP' BELOW TO BROADCAST</p>
+      </div>
+    </main>
+  </div>
 
-  <!-- Auth Modal -->
+  <!-- Bottom Floating VCR Control Pad -->
+  <div class="vcr-control-pad">
+    <button class="pad-btn rec-btn" onclick="toggleModal('upload-modal', true)">● REC CLIP</button>
+  </div>
+
+  <!-- Modal: Auth / Gatekeeper -->
   <div id="auth-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <span class="close-btn" onclick="toggleModal('auth-modal', false)">&times;</span>
-      <h2>Enter Bogus</h2>
-      <p class="subtitle">Strictly 1946 – 1996.</p>
-
-      <input type="text" id="reg-username" placeholder="Username" />
-      <input type="email" id="auth-email" placeholder="Email" />
-      <input type="password" id="auth-password" placeholder="Password" />
-      <input type="number" id="reg-year" placeholder="Birth Year (e.g. 1985)" min="1946" max="1996" />
-
-      <div id="trivia-box">
-        <label id="trivia-question"></label>
-        <input type="text" id="trivia-answer" placeholder="Your answer" />
+    <div class="win95-window">
+      <div class="win95-titlebar">
+        <span>📼 BOGUS SECURITY GATEWAY (1946–1996)</span>
+        <button class="win95-close" onclick="toggleModal('auth-modal', false)">✕</button>
       </div>
+      <div class="win95-body">
+        <p class="gate-notice">System access restricted to Boomers, Gen X, and Millennials.</p>
 
-      <div class="modal-buttons">
-        <button onclick="handleRegister()">Join Bogus</button>
-        <button class="secondary" onclick="handleSignIn()">Sign In</button>
+        <label class="retro-label">CALLSIGN / USERNAME:</label>
+        <input type="text" id="reg-username" class="retro-input" placeholder="e.g. RadRacer88" />
+
+        <label class="retro-label">EMAIL ADDRESS:</label>
+        <input type="email" id="auth-email" class="retro-input" placeholder="user@bogus.net" />
+
+        <label class="retro-label">SECRET KEY (PASSWORD):</label>
+        <input type="password" id="auth-password" class="retro-input" placeholder="••••••••" />
+
+        <label class="retro-label">YEAR OF BIRTH (1946–1996):</label>
+        <input type="number" id="reg-year" class="retro-input" placeholder="1984" min="1946" max="1996" />
+
+        <div id="trivia-box" class="retro-card">
+          <span class="trivia-tag">RETRO TRIVIA VERIFICATION:</span>
+          <label id="trivia-question" class="trivia-text"></label>
+          <input type="text" id="trivia-answer" class="retro-input" placeholder="Type answer here..." />
+        </div>
+
+        <div class="win95-actions">
+          <button class="win95-btn primary" onclick="handleRegister()">CREATE TAPE</button>
+          <button class="win95-btn" onclick="handleSignIn()">SIGN IN</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Upload Modal -->
+  <!-- Modal: Post Clip -->
   <div id="upload-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <span class="close-btn" onclick="toggleModal('upload-modal', false)">&times;</span>
-      <h2>Upload Video</h2>
-      <input type="file" id="video-file" accept="video/*" />
-      <input type="text" id="video-caption" placeholder="Caption" />
-      <button id="upload-submit-btn" onclick="handleUpload()">Post to Feed</button>
+    <div class="win95-window">
+      <div class="win95-titlebar">
+        <span>📹 CAMCORDER DUBBING CONSOLE</span>
+        <button class="win95-close" onclick="toggleModal('upload-modal', false)">✕</button>
+      </div>
+      <div class="win95-body">
+        <label class="retro-label">SELECT VIDEO CASSETTE (UNDER 100MB):</label>
+        <input type="file" id="video-file" class="retro-file" accept="video/*" />
+
+        <label class="retro-label">TAPE TITLE / CAPTION:</label>
+        <input type="text" id="video-caption" class="retro-input" placeholder="Summer Vacation '92..." />
+
+        <button id="upload-submit-btn" class="win95-btn primary full" onclick="handleUpload()">DUB TO FEED</button>
+      </div>
     </div>
   </div>
 
-  <!-- Report Modal -->
+  <!-- Modal: Content Report -->
   <div id="report-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <span class="close-btn" onclick="toggleModal('report-modal', false)">&times;</span>
-      <h2>Report Content</h2>
-      <p class="subtitle">Flag inappropriate material or policy violations.</p>
-
-      <select id="report-reason">
-        <option value="suspected_born_after_1996">Suspected born after 1996</option>
-        <option value="spam">Spam / Scam</option>
-        <option value="illegal">Illegal or Dangerous Content</option>
-        <option value="harassment">Harassment / Bullying</option>
-        <option value="other">Other Violation</option>
-      </select>
-
-      <button id="report-submit-btn" onclick="submitReport()">Submit Report</button>
+    <div class="win95-window">
+      <div class="win95-titlebar">
+        <span>🚩 SIGNAL INTERFERENCE REPORT</span>
+        <button class="win95-close" onclick="toggleModal('report-modal', false)">✕</button>
+      </div>
+      <div class="win95-body">
+        <label class="retro-label">VIOLATION TYPE:</label>
+        <select id="report-reason" class="retro-input">
+          <option value="suspected_born_after_1996">Suspected born after 1996</option>
+          <option value="spam">Commercial Spam / Scam</option>
+          <option value="illegal">Hazardous / Illegal Transmission</option>
+          <option value="harassment">Hostile Harassment</option>
+          <option value="other">General Violation</option>
+        </select>
+        <button id="report-submit-btn" class="win95-btn danger full" onclick="submitReport()">TRANSMIT REPORT</button>
+      </div>
     </div>
   </div>
 
-  <!-- Messenger Modal -->
+  <!-- Modal: Messenger (Instant Pager) -->
   <div id="dm-modal" class="modal-overlay hidden">
-    <div class="modal-card dm-card">
-      <div class="dm-header">
-        <span id="dm-chat-title">Direct Messages</span>
-        <span class="close-btn" onclick="toggleModal('dm-modal', false)">&times;</span>
+    <div class="win95-window dm-window">
+      <div class="win95-titlebar">
+        <span id="dm-chat-title">📟 BOGUS INSTANT MESSENGER</span>
+        <button class="win95-close" onclick="toggleModal('dm-modal', false)">✕</button>
       </div>
 
-      <!-- User Directory -->
-      <div id="dm-user-list-view">
-        <div class="dm-list-title">Start a Chat</div>
-        <div id="dm-users-container"></div>
+      <!-- Member Directory -->
+      <div id="dm-user-list-view" class="win95-body">
+        <div class="retro-statusbar">ONLINE DIRECTORY - SELECT RECIPIENT</div>
+        <div id="dm-users-container" class="pager-list"></div>
       </div>
 
-      <!-- Active Thread -->
-      <div id="dm-thread-view" class="hidden">
-        <button class="dm-back-btn" onclick="showUserList()">← Back to users</button>
-        <div id="chat-messages-container"></div>
-        <form class="dm-input-row" onsubmit="handleSendMessage(event)">
-          <input type="text" id="dm-message-input" placeholder="Type a message..." autocomplete="off" />
-          <button type="submit">Send</button>
+      <!-- Chat Thread -->
+      <div id="dm-thread-view" class="win95-body hidden">
+        <button class="win95-btn small" onclick="showUserList()">◄ RETURN TO DIRECTORY</button>
+        <div id="chat-messages-container" class="retro-chat-box"></div>
+        <form class="dm-send-row" onsubmit="handleSendMessage(event)">
+          <input type="text" id="dm-message-input" class="retro-input" placeholder="Type transmission..." autocomplete="off" />
+          <button type="submit" class="win95-btn">SEND</button>
         </form>
       </div>
     </div>
