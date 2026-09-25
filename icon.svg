@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#0b0c10"/>
+  <rect x="56" y="116" width="400" height="280" rx="30" fill="#1f2833" stroke="#66fcf1" stroke-width="14"/>
+  <rect x="100" y="160" width="312" height="110" rx="15" fill="#0b0c10" stroke="#45a29e" stroke-width="6"/>
+  <circle cx="170" cy="215" r="34" fill="#1f2833" stroke="#66fcf1" stroke-width="8"/>
+  <circle cx="342" cy="215" r="34" fill="#1f2833" stroke="#66fcf1" stroke-width="8"/>
+  <rect x="220" y="200" width="72" height="30" rx="6" fill="#45a29e"/>
+  <rect x="100" y="305" width="312" height="50" rx="8" fill="#e0e0e0"/>
+  <text x="256" y="340" fill="#0b0c10" font-size="28" font-family="monospace" font-weight="900" text-anchor="middle" letter-spacing="4">BOGUS 1996</text>
+</svg>
