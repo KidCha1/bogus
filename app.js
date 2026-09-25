@@ -1,20 +1,17 @@
-// Supabase Configuration
 const SUPABASE_URL = "https://ibygzwcxmtthxwgaxsib.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_heeXi4X2kSJdzk2yERH5Fw_c05PnLfS";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Cloudinary Configuration
 const CLOUDINARY_CLOUD_NAME = "mjavcozx";
 const CLOUDINARY_PRESET = "bogus_uploads";
+const CLOUDINARY_API_KEY = "866355471417226";
 
-// State
 let currentUser = null;
 let activeRecipientId = null;
 let activeRecipientUsername = '';
 let realtimeChannel = null;
-let pendingReportTarget = null; // { videoId, reportedUserId }
+let pendingReportTarget = null;
 
-// Retro Verification Bank
 const RETRO_QUESTIONS = [
   {
     q: "Verification: What did you do to a Nintendo cartridge when it wouldn't work?",
@@ -43,13 +40,12 @@ let activeQuestionIndex = 0;
 function setRandomTrivia() {
   activeQuestionIndex = Math.floor(Math.random() * RETRO_QUESTIONS.length);
   const qLabel = document.getElementById('trivia-question');
-  if (qLabel) {
-    qLabel.innerText = RETRO_QUESTIONS[activeQuestionIndex].q;
-  }
+  if (qLabel) qLabel.innerText = RETRO_QUESTIONS[activeQuestionIndex].q;
 }
 
 function toggleModal(id, show) {
   const modal = document.getElementById(id);
+  if (!modal) return;
   if (show) {
     modal.classList.remove('hidden');
     if (id === 'auth-modal') {
@@ -62,7 +58,6 @@ function toggleModal(id, show) {
   }
 }
 
-// 1. Auth & Age Gate (1946–1996)
 async function handleRegister() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
@@ -70,20 +65,11 @@ async function handleRegister() {
   const year = parseInt(document.getElementById('reg-year').value, 10);
   const userAnswer = document.getElementById('trivia-answer').value.trim().toLowerCase();
 
-  if (!email || !password || !username || !year || !userAnswer) {
-    alert("Please fill out all fields!");
-    return;
-  }
-
-  if (year < 1946 || year > 1996) {
-    alert("Birth year must be between 1946 and 1996.");
-    return;
-  }
+  if (!email || !password || !username || !year || !userAnswer) return alert("Please fill out all fields!");
+  if (year < 1946 || year > 1996) return alert("Birth year must be between 1946 and 1996.");
 
   const validAnswers = RETRO_QUESTIONS[activeQuestionIndex].answers;
-  const passedTrivia = validAnswers.some(ans => userAnswer.includes(ans));
-
-  if (!passedTrivia) {
+  if (!validAnswers.some(ans => userAnswer.includes(ans))) {
     alert("Incorrect verification answer. Try again.");
     setRandomTrivia();
     document.getElementById('trivia-answer').value = '';
@@ -110,7 +96,6 @@ async function handleRegister() {
 async function handleSignIn() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
-
   const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) alert(error.message);
   else {
@@ -133,20 +118,19 @@ async function checkUser() {
 
   if (session) {
     currentUser = session.user;
-    openBtn.style.display = 'none';
-    outBtn.style.display = 'block';
-    dmBtn.style.display = 'block';
+    if (openBtn) openBtn.style.display = 'none';
+    if (outBtn) outBtn.style.display = 'block';
+    if (dmBtn) dmBtn.style.display = 'block';
     setupRealtimeSubscription();
   } else {
     currentUser = null;
-    openBtn.style.display = 'block';
-    outBtn.style.display = 'none';
-    dmBtn.style.display = 'none';
+    if (openBtn) openBtn.style.display = 'block';
+    if (outBtn) outBtn.style.display = 'none';
+    if (dmBtn) dmBtn.style.display = 'none';
   }
   loadVideos();
 }
 
-// 2. Cloudinary Upload (100MB limit)
 async function handleUpload() {
   if (!currentUser) {
     alert("You must sign in to post a video!");
@@ -170,6 +154,7 @@ async function handleUpload() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_PRESET);
+    formData.append("api_key", CLOUDINARY_API_KEY);
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
       method: "POST",
@@ -191,7 +176,6 @@ async function handleUpload() {
     btn.disabled = false;
     toggleModal('upload-modal', false);
     loadVideos();
-
   } catch (err) {
     alert("Upload error: " + err.message);
     btn.innerText = "Post to Feed";
@@ -199,9 +183,9 @@ async function handleUpload() {
   }
 }
 
-// 3. Feed Loader with DM and Report Buttons
 async function loadVideos() {
   const feed = document.getElementById('video-feed');
+  if (!feed) return;
 
   const { data: videos, error } = await client
     .from('videos')
@@ -215,7 +199,6 @@ async function loadVideos() {
     const card = document.createElement('div');
     card.className = 'video-card';
     const authorName = v.profiles?.username || 'user';
-
     const dmButtonHtml = (currentUser && currentUser.id !== v.user_id)
       ? `<button class="action-btn" onclick="openChatWith('${v.user_id}', '${authorName}')">💬 Message</button>`
       : '';
@@ -235,7 +218,6 @@ async function loadVideos() {
   });
 }
 
-// 4. Report System
 function openReportModal(videoId, reportedUserId) {
   if (!currentUser) {
     alert("Please sign in to report content.");
@@ -248,10 +230,8 @@ function openReportModal(videoId, reportedUserId) {
 
 async function submitReport() {
   if (!pendingReportTarget || !currentUser) return;
-
   const reason = document.getElementById('report-reason').value;
   const btn = document.getElementById('report-submit-btn');
-
   btn.innerText = "Submitting...";
   btn.disabled = true;
 
@@ -266,19 +246,12 @@ async function submitReport() {
   btn.disabled = false;
   toggleModal('report-modal', false);
 
-  if (error) {
-    alert("Failed to submit report: " + error.message);
-  } else {
-    alert("Report logged. Thank you.");
-  }
+  if (error) alert("Failed to submit report: " + error.message);
+  else alert("Report logged. Thank you.");
 }
 
-// 5. Direct Messaging System
 function openInbox() {
-  if (!currentUser) {
-    toggleModal('auth-modal', true);
-    return;
-  }
+  if (!currentUser) return toggleModal('auth-modal', true);
   showUserList();
   loadAllUsers();
   toggleModal('dm-modal', true);
@@ -316,11 +289,7 @@ async function loadAllUsers() {
 }
 
 async function openChatWith(recipientId, recipientUsername) {
-  if (!currentUser) {
-    toggleModal('auth-modal', true);
-    return;
-  }
-
+  if (!currentUser) return toggleModal('auth-modal', true);
   activeRecipientId = recipientId;
   activeRecipientUsername = recipientUsername;
 
@@ -342,11 +311,7 @@ async function loadMessagesForActiveThread() {
     .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeRecipientId}),and(sender_id.eq.${activeRecipientId},receiver_id.eq.${currentUser.id})`)
     .order('created_at', { ascending: true });
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-
+  if (error) return console.error(error);
   messages.forEach(msg => appendMessageBubble(msg));
   container.scrollTop = container.scrollHeight;
 }
@@ -365,7 +330,6 @@ async function handleSendMessage(event) {
   event.preventDefault();
   const input = document.getElementById('dm-message-input');
   const text = input.value.trim();
-
   if (!text || !activeRecipientId || !currentUser) return;
   input.value = '';
 
@@ -378,10 +342,8 @@ async function handleSendMessage(event) {
   if (error) alert("Failed to send: " + error.message);
 }
 
-// 6. Supabase Realtime Listener
 function setupRealtimeSubscription() {
   if (realtimeChannel) client.removeChannel(realtimeChannel);
-
   realtimeChannel = client
     .channel('public:messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
@@ -397,5 +359,4 @@ function setupRealtimeSubscription() {
     .subscribe();
 }
 
-// Boot check
 checkUser();
